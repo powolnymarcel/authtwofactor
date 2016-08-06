@@ -23,4 +23,19 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+
+    public function phoneNumber()
+    {
+        return $this->hasOne(PhoneNumber::class);
+    }
+
+    public function hasTwoFacteurAuthentificationActivee()
+    {
+        return $this->two_factor_type !== 'off';
+    }
+
+    public function hasSmsTwoFactorAuthenticationEnabled(){
+        return $this->two_factor_type === 'sms';
+
+    }
 }

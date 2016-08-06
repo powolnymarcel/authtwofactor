@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Authy;
+use App\Services\Authy\Exceptions\SmsRequestFailedException;
 use App\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Validator;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
@@ -29,6 +33,7 @@ class AuthController extends Controller
      * @var string
      */
     protected $redirectTo = '/';
+    protected $redirectToToken = '/auth/token';
 
     /**
      * Create a new authentication controller instance.
@@ -69,4 +74,48 @@ class AuthController extends Controller
             'password' => bcrypt($data['password']),
         ]);
     }
+    protected function authenticated(Request $request,User $user)
+    {
+       
+        if ($user->hasTwoFacteurAuthentificationActivee())
+        {
+            return $this->logoutAndRedirectToTokenEntry($request, $user);
+        }
+
+        return redirect()->intended($this->redirectPath());
+    }
+
+    protected function logoutAndRedirectToTokenEntry(Request $request,User $user)
+    {
+        Auth::guard($this->getGuard())->logout();
+
+        $request->session()->put('authy',[
+            'user_id'=>$user->id,
+           'authy_id'=>$user->authy_id,
+            'using_sms'=>false,
+            'remember'=>$request->has('remember')
+        ]);
+
+
+        if ($user->hasSmsTwoFactorAuthenticationEnabled())
+        {
+            try{
+                Authy::requeteSms($user);
+            }catch (SmsRequestFailedException $e){
+                return redirect()->back();
+            }
+            $request->session()->push(
+                'authy.using_sms',true
+            );
+        }
+
+        return redirect($this->redirectTokenPath());
+
+    }
+
+    protected function redirectTokenPath()
+    {
+        return $this->redirectToToken;
+    }
+
 }
