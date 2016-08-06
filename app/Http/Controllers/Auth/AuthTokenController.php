@@ -56,7 +56,7 @@ class AuthTokenController extends Controller
         }
 
         try {
-            Authy::requestSms($user);
+            Authy::requeteSms($user);
         } catch (SmsRequestFailedException $e) {
             return redirect()->back();
         }
